@@ -90,3 +90,25 @@ export function mergePiece(
 
   return newGrid;
 }
+
+/**
+ * Scans the grid for fully-packed rows, removes them, and pads the top
+ * with the same number of empty rows to preserve grid height.
+ * Pure function: returns a new grid, does not mutate the original.
+ */
+export function clearFullRows(grid: number[][]): { newGrid: number[][]; linesCleared: number } {
+  const width = grid[0]?.length ?? 0;
+
+  // Keep only rows that have at least one empty (0) cell.
+  const remainingRows = grid.filter((row) => row.some((cell) => cell === 0));
+
+  const linesCleared = grid.length - remainingRows.length;
+
+  // Build fresh empty rows to replace the ones removed, then place them on top.
+  const newEmptyRows = Array.from({ length: linesCleared }, () => Array(width).fill(0));
+
+  return {
+    newGrid: [...newEmptyRows, ...remainingRows],
+    linesCleared,
+  };
+}

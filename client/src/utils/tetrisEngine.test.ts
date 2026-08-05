@@ -1,4 +1,7 @@
-import { rotateMatrix, checkCollision, mergePiece } from './tetrisEngine';
+import { rotateMatrix, 
+  checkCollision, 
+  mergePiece, 
+  clearFullRows } from './tetrisEngine';
 
 function emptyGrid(width: number, height: number): number[][] {
   return Array.from({ length: height }, () => Array(width).fill(0));
@@ -169,5 +172,74 @@ describe('mergePiece', () => {
 
     expect(result[0]![9]).toBe(4); // in-bounds cell still written
     expect(result[0]![10]).toBeUndefined(); // out-of-bounds cell simply doesn't exist
+  });
+});
+
+describe('clearFullRows', () => {
+  it('clears a single full row and pads the top with an empty row', () => {
+    const grid = emptyGrid(4, 3); // small grid for readability: 4 wide, 3 tall
+    grid[2] = [1, 2, 3, 4]; // bottom row fully packed
+
+    const { newGrid, linesCleared } = clearFullRows(grid);
+
+    expect(linesCleared).toBe(1);
+    expect(newGrid).toEqual([
+      [0, 0, 0, 0], // new empty row added at top
+      [0, 0, 0, 0], // original row 0, still empty
+      [0, 0, 0, 0], // original row 1, still empty
+    ]);
+  });
+
+  it('does not clear a row with even one empty cell', () => {
+    const grid = emptyGrid(4, 3);
+    grid[2] = [1, 2, 0, 4]; // one empty cell — not full
+
+    const { newGrid, linesCleared } = clearFullRows(grid);
+
+    expect(linesCleared).toBe(0);
+    expect(newGrid).toEqual(grid);
+  });
+
+  it('clears multiple full rows at once and preserves surviving row order', () => {
+    const grid = [
+      [1, 1, 1, 1], // full — will clear
+      [2, 0, 2, 2], // not full — survives
+      [3, 3, 3, 3], // full — will clear
+    ];
+
+    const { newGrid, linesCleared } = clearFullRows(grid);
+
+    expect(linesCleared).toBe(2);
+    expect(newGrid).toEqual([
+      [0, 0, 0, 0],
+      [0, 0, 0, 0],
+      [2, 0, 2, 2], // the only survivor, still intact and in place
+    ]);
+  });
+
+  it('does not mutate the original grid', () => {
+    const grid = emptyGrid(4, 3);
+    grid[2] = [1, 2, 3, 4];
+    const gridSnapshot = grid.map((row) => [...row]);
+
+    clearFullRows(grid);
+
+    expect(grid).toEqual(gridSnapshot);
+  });
+
+  it('clears zero rows when nothing is full', () => {
+    const grid = emptyGrid(4, 3);
+
+    const { newGrid, linesCleared } = clearFullRows(grid);
+
+    expect(linesCleared).toBe(0);
+    expect(newGrid).toEqual(grid);
+  });
+
+  it('handles an empty grid without crashing (defensive)', () => {
+    const { newGrid, linesCleared } = clearFullRows([]);
+  
+    expect(linesCleared).toBe(0);
+    expect(newGrid).toEqual([]);
   });
 });
