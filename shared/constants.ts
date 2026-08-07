@@ -1,4 +1,4 @@
-import type { PieceKey } from '../../../shared/types';
+import type { PieceKey } from './types';
 
 export const GRID_WIDTH = 10;
 export const GRID_HEIGHT = 20;

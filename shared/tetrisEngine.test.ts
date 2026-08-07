@@ -7,9 +7,10 @@ import { rotateMatrix,
   getGhostPosition, 
   createSeededRandom,
   generateBag,
-  getNextPiece } from './tetrisEngine';
+  getNextPiece,
+  createEmptyGrid } from './tetrisEngine';
 import { PIECE_KEYS } from './constants';
-import type { PieceKey } from '../../../shared/types';
+import type { PieceKey } from './types';
 
 function emptyGrid(width: number, height: number): number[][] {
   return Array.from({ length: height }, () => Array(width).fill(0));
@@ -403,5 +404,22 @@ describe('getNextPiece', () => {
     getNextPiece(queue, random);
 
     expect(queue).toEqual(queueSnapshot);
+  });
+});
+
+
+describe('createEmptyGrid', () => {
+  it('creates a grid at standard Tetris dimensions (10 wide, 20 tall)', () => {
+    const grid = createEmptyGrid();
+
+    expect(grid).toHaveLength(20);
+    expect(grid[0]).toHaveLength(10);
+  });
+
+  it('fills every cell with 0', () => {
+    const grid = createEmptyGrid();
+    const allZero = grid.every((row) => row.every((cell) => cell === 0));
+
+    expect(allZero).toBe(true);
   });
 });

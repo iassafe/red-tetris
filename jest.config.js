@@ -1,4 +1,4 @@
-// jest.config.js
+
 module.exports = {
   projects: [
     {
@@ -6,12 +6,18 @@ module.exports = {
       testEnvironment: 'jsdom',
       testMatch: ['<rootDir>/client/**/*.test.ts?(x)'],
       preset: 'ts-jest',
-      setupFilesAfterEnv: ['@testing-library/jest-dom'], // <- fixed key
+      setupFilesAfterEnv: ['@testing-library/jest-dom'],
     },
     {
       displayName: 'server',
       testEnvironment: 'node',
       testMatch: ['<rootDir>/server/**/*.test.ts'],
+      preset: 'ts-jest',
+    },
+    {
+      displayName: 'shared',
+      testEnvironment: 'node',
+      testMatch: ['<rootDir>/shared/**/*.test.ts'],
       preset: 'ts-jest',
     },
   ],

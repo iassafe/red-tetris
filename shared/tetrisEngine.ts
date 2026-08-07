@@ -1,5 +1,5 @@
-import { PIECE_KEYS } from './constants';
-import type { PieceKey } from '../../../shared/types';
+import { PIECE_KEYS, GRID_WIDTH, GRID_HEIGHT } from './constants';
+import type { PieceKey } from './types';
 
 /**
  * Rotates a square NxN matrix 90 degrees clockwise.
@@ -215,4 +215,13 @@ export function getNextPiece(
   const [piece, ...remainingQueue] = currentQueue;
 
   return { piece: piece!, remainingQueue };
+}
+
+
+/**
+ * Creates a fresh, empty grid at the standard Tetris dimensions (10x20).
+ * Pure function.
+ */
+export function createEmptyGrid(): number[][] {
+  return Array.from({ length: GRID_HEIGHT }, () => Array(GRID_WIDTH).fill(0));
 }
