@@ -1,5 +1,5 @@
-import type { Grid, ActivePiece, PieceKey, Spectrum } from '../../shared/types';
-import { createEmptyGrid } from '../../shared/tetrisEngine'; 
+import { createEmptyGrid } from '../../shared/tetrisEngine';
+import type { Grid, ActivePiece, PieceKey } from '../../shared/types';
 
 export class Player {
   public readonly id: string;
@@ -30,26 +30,24 @@ export class Player {
     this.hasHeldThisDrop = false;
   }
 
-  /** Returns the height-map spectrum for this player's current grid. */
-  getSpectrum(): Spectrum {
-    // delegates to the pure engine function — the class doesn't reimplement game math
-    const { getSpectrum } = require('../../client/src/utils/tetrisEngine');
-    return getSpectrum(this.grid);
-  }
-
-  /** Adds points to this player's score, based on lines cleared this drop. */
+  /** Adds points to this player's running score. */
   addScore(points: number): void {
     this.score += points;
   }
 
-  /** Increments lines cleared and recalculates level (every 10 lines = +1 level). */
+  /** Registers newly cleared lines and recalculates level (every 10 lines = +1 level). */
   registerLinesCleared(count: number): void {
     this.linesCleared += count;
     this.level = Math.floor(this.linesCleared / 10) + 1;
   }
 
-  /** Marks this player as eliminated (blocks reached the top). */
+  /** Marks this player as eliminated (their blocks reached the top). */
   eliminate(): void {
     this.isAlive = false;
+  }
+
+  /** Resets per-drop state — called whenever a new piece spawns. */
+  resetDropState(): void {
+    this.hasHeldThisDrop = false;
   }
 }
