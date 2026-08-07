@@ -8,7 +8,9 @@ import { rotateMatrix,
   createSeededRandom,
   generateBag,
   getNextPiece,
-  createEmptyGrid } from './tetrisEngine';
+  createEmptyGrid,
+  tick,
+  getDropInterval } from './tetrisEngine';
 import { PIECE_KEYS } from './constants';
 import type { PieceKey } from './types';
 
@@ -421,5 +423,81 @@ describe('createEmptyGrid', () => {
     const allZero = grid.every((row) => row.every((cell) => cell === 0));
 
     expect(allZero).toBe(true);
+  });
+});
+
+
+describe('tick', () => {
+  const oPiece = [
+    [4, 4],
+    [4, 4],
+  ];
+
+  it('moves the piece down one row when space is open below', () => {
+    const grid = emptyGrid(10, 20);
+    const result = tick(grid, oPiece, { x: 4, y: 0 }, false);
+
+    expect(result.locked).toBe(false);
+    expect(result.touchingGround).toBe(false);
+    expect(result.position).toEqual({ x: 4, y: 1 });
+  });
+
+  it('holds position and flags touchingGround on first contact with the floor', () => {
+    const grid = emptyGrid(10, 20);
+    // O-piece is 2 tall; at y=18 its bottom edge is at row 19, the last row.
+    const result = tick(grid, oPiece, { x: 4, y: 18 }, false);
+
+    expect(result.locked).toBe(false);
+    expect(result.touchingGround).toBe(true);
+    expect(result.position).toEqual({ x: 4, y: 18 }); // unchanged
+  });
+
+  it('locks the piece if it was already touching ground on the previous tick', () => {
+    const grid = emptyGrid(10, 20);
+    const result = tick(grid, oPiece, { x: 4, y: 18 }, true);
+
+    expect(result.locked).toBe(true);
+    expect(result.grid).toBeDefined();
+    expect(result.grid![18]![4]).toBe(4);
+    expect(result.grid![19]![4]).toBe(4);
+    expect(result.linesCleared).toBe(0);
+  });
+
+  it('reports lines cleared when locking completes a full row', () => {
+    const grid = emptyGrid(4, 20);
+    // Fill row 19 except for columns 4 and 5 (where a 1-wide piece could complete it)
+    // Use a 1-cell piece for a minimal, easy-to-reason-about test.
+    grid[19] = [1, 1, 0, 1];
+    const singleCellPiece = [[1]];
+
+    const result = tick(grid, singleCellPiece, { x: 2, y: 19 }, true);
+
+    expect(result.locked).toBe(true);
+    expect(result.linesCleared).toBe(1);
+  });
+
+  it('gives one grace tick before locking even when landing directly on the pile', () => {
+    const grid = emptyGrid(10, 20);
+    grid[19]!.fill(1); // solid floor of locked blocks at row 19
+    // Piece sits right above the pile, first tick touching it (wasTouchingGround = false)
+    const result = tick(grid, oPiece, { x: 4, y: 17 }, false);
+
+    expect(result.locked).toBe(false);
+    expect(result.touchingGround).toBe(true);
+  });
+});
+
+describe('getDropInterval', () => {
+  it('returns 1000ms at level 1', () => {
+    expect(getDropInterval(1)).toBe(1000);
+  });
+
+  it('decreases by 50ms per level', () => {
+    expect(getDropInterval(2)).toBe(950);
+    expect(getDropInterval(5)).toBe(800);
+  });
+
+  it('never drops below the 100ms floor', () => {
+    expect(getDropInterval(100)).toBe(100);
   });
 });

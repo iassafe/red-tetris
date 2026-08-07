@@ -1,5 +1,14 @@
 import { PIECE_KEYS, GRID_WIDTH, GRID_HEIGHT } from './constants';
-import type { PieceKey } from './types';
+import type { PieceKey, Grid } from './types';
+
+export interface TickResult {
+  position: { x: number; y: number };
+  locked: boolean;
+  touchingGround: boolean;
+  grid?: Grid;
+  linesCleared?: number;
+}
+
 
 /**
  * Rotates a square NxN matrix 90 degrees clockwise.
@@ -224,4 +233,48 @@ export function getNextPiece(
  */
 export function createEmptyGrid(): number[][] {
   return Array.from({ length: GRID_HEIGHT }, () => Array(GRID_WIDTH).fill(0));
+}
+
+/**
+ * Advances one gravity tick for a falling piece.
+ * - If the piece can still fall, moves it down one row.
+ * - If it's touching the pile/floor for the first time, holds position and
+ *   flags touchingGround (the "grace tick" the lock delay rule requires).
+ * - If it was already touching ground last tick, locks it into the grid now.
+ * Pure function: does not mutate grid or piece.
+ */
+export function tick(
+  grid: Grid,
+  piece: number[][],
+  position: { x: number; y: number },
+  wasTouchingGround: boolean
+): TickResult {
+  const wouldCollideBelow = checkCollision(grid, piece, { x: position.x, y: position.y + 1 });
+
+  if (!wouldCollideBelow) {
+    return {
+      position: { x: position.x, y: position.y + 1 },
+      locked: false,
+      touchingGround: false,
+    };
+  }
+
+  if (wasTouchingGround) {
+    const merged = mergePiece(grid, piece, position);
+    const { newGrid, linesCleared } = clearFullRows(merged);
+    return { position, locked: true, touchingGround: true, grid: newGrid, linesCleared };
+  }
+
+  // First tick touching down — grace period, don't lock yet.
+  return { position, locked: false, touchingGround: true };
+}
+
+/**
+ * Computes the gravity tick interval (ms) for a given level.
+ * Higher level = faster falling, with a floor so it never becomes unplayable.
+ * Pure function.
+ */
+export function getDropInterval(level: number): number {
+  const interval = 1000 - (level - 1) * 50;
+  return Math.max(interval, 100);
 }
