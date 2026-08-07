@@ -1,7 +1,10 @@
 import { rotateMatrix, 
   checkCollision, 
   mergePiece, 
-  clearFullRows } from './tetrisEngine';
+  clearFullRows,
+  calculateScore, 
+  getSpectrum,
+  getGhostPosition } from './tetrisEngine';
 
 function emptyGrid(width: number, height: number): number[][] {
   return Array.from({ length: height }, () => Array(width).fill(0));
@@ -241,5 +244,82 @@ describe('clearFullRows', () => {
   
     expect(linesCleared).toBe(0);
     expect(newGrid).toEqual([]);
+  });
+});
+
+
+describe('calculateScore', () => {
+  it('awards 100 * level for a single line clear', () => {
+    expect(calculateScore(1, 3)).toBe(300);
+  });
+
+  it('awards 300 * level for a double', () => {
+    expect(calculateScore(2, 2)).toBe(600);
+  });
+
+  it('awards 500 * level for a triple', () => {
+    expect(calculateScore(3, 1)).toBe(500);
+  });
+
+  it('awards 800 * level for a tetris (four lines)', () => {
+    expect(calculateScore(4, 5)).toBe(4000);
+  });
+
+  it('awards 0 points when no lines are cleared', () => {
+    expect(calculateScore(0, 3)).toBe(0);
+  });
+});
+
+
+describe('getSpectrum', () => {
+  it('returns 0 for every column on an empty grid', () => {
+    const grid = emptyGrid(4, 5);
+    expect(getSpectrum(grid)).toEqual([0, 0, 0, 0]);
+  });
+
+  it('returns the correct height for a column with one locked cell at the bottom', () => {
+    const grid = emptyGrid(4, 5);
+    grid[4]![1] = 3; // bottom row, column 1
+    expect(getSpectrum(grid)).toEqual([0, 1, 0, 0]);
+  });
+
+  it('measures height from the topmost filled cell in each column', () => {
+    const grid = emptyGrid(4, 5);
+    grid[2]![0] = 1; // column 0 has a block starting at row 2
+    grid[4]![0] = 1; // and another below it at row 4
+    // topmost filled cell in column 0 is row 2, out of 5 total rows -> height 5-2=3
+    expect(getSpectrum(grid)).toEqual([3, 0, 0, 0]);
+  });
+
+  it('handles an empty grid without crashing (defensive)', () => {
+    expect(getSpectrum([])).toEqual([]);
+  });
+});
+
+
+describe('getGhostPosition', () => {
+  const oPiece = [
+    [4, 4],
+    [4, 4],
+  ];
+
+  it('drops straight to the floor on an empty grid', () => {
+    const grid = emptyGrid(10, 20);
+    const result = getGhostPosition(grid, oPiece, { x: 4, y: 0 });
+    expect(result).toEqual({ x: 4, y: 18 }); // O-piece is 2 tall, floor is row 19 -> lands at 18
+  });
+
+  it('stops just above a locked pile', () => {
+    const grid = emptyGrid(10, 20);
+    grid[10]![4] = 1;
+    grid[10]![5] = 1;
+    const result = getGhostPosition(grid, oPiece, { x: 4, y: 0 });
+    expect(result).toEqual({ x: 4, y: 8 }); // piece bottom (row+1) must sit just above row 10
+  });
+
+  it('does not move if already resting on the floor', () => {
+    const grid = emptyGrid(10, 20);
+    const result = getGhostPosition(grid, oPiece, { x: 4, y: 18 });
+    expect(result).toEqual({ x: 4, y: 18 });
   });
 });

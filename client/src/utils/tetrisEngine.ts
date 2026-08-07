@@ -1,4 +1,3 @@
-// client/src/utils/tetrisEngine.ts
 
 /**
  * Rotates a square NxN matrix 90 degrees clockwise.
@@ -111,4 +110,58 @@ export function clearFullRows(grid: number[][]): { newGrid: number[][]; linesCle
     newGrid: [...newEmptyRows, ...remainingRows],
     linesCleared,
   };
+}
+
+const LINE_CLEAR_BASE_SCORE: Record<number, number> = {
+  1: 100,
+  2: 300,
+  3: 500,
+  4: 800,
+};
+
+
+/**
+ * Computes score awarded for clearing `linesCleared` lines simultaneously at `level`.
+ * Pure function.
+ */
+export function calculateScore(linesCleared: number, level: number): number {
+  const baseScore = LINE_CLEAR_BASE_SCORE[linesCleared] ?? 0;
+  return baseScore * level;
+}
+
+
+/**
+ * Computes a column height map (spectrum) from a grid — one number per column,
+ * representing how many rows from the top the highest locked cell sits.
+ * Pure function.
+ */
+export function getSpectrum(grid: number[][]): number[] {
+  const width = grid[0]?.length ?? 0;
+  const height = grid.length;
+
+  return Array.from({ length: width }, (_, col) => {
+    const column = grid.map((row) => row[col]);
+    const firstFilledRow = column.findIndex((cell) => cell !== 0);
+    return firstFilledRow === -1 ? 0 : height - firstFilledRow;
+  });
+}
+
+
+/**
+ * Computes the landing position of `piece` if hard-dropped from its current
+ * position, by repeatedly testing one row lower until a collision would occur.
+ * Pure function.
+ */
+export function getGhostPosition(
+  grid: number[][],
+  piece: number[][],
+  position: { x: number; y: number }
+): { x: number; y: number } {
+  let ghostY = position.y;
+
+  while (!checkCollision(grid, piece, { x: position.x, y: ghostY + 1 })) {
+    ghostY++;
+  }
+
+  return { x: position.x, y: ghostY };
 }
