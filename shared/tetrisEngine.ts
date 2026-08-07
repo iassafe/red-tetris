@@ -1,4 +1,4 @@
-import { PIECE_KEYS, GRID_WIDTH, GRID_HEIGHT } from './constants';
+import { PIECE_KEYS, GRID_WIDTH, GRID_HEIGHT, GARBAGE_CELL_ID } from './constants';
 import type { PieceKey, Grid } from './types';
 
 export interface TickResult {
@@ -277,4 +277,29 @@ export function tick(
 export function getDropInterval(level: number): number {
   const interval = 1000 - (level - 1) * 50;
   return Math.max(interval, 100);
+}
+
+/**
+ * Pushes a grid upward by inserting `count` indestructible garbage rows at
+ * the bottom, discarding the same number of rows off the top.
+ * Garbage rows are filled with GARBAGE_CELL_ID, with one random gap per row
+ * (standard Tetris garbage behavior — never a completely solid row).
+ * Pure function: does not mutate the input grid.
+ */
+export function addGarbageRows(
+  grid: Grid,
+  count: number,
+  random: () => number
+): Grid {
+  if (count <= 0) return grid.map((row) => [...row]);
+
+  const width = grid[0]?.length ?? 0;
+  const remainingRows = grid.slice(count); // drop the top `count` rows
+
+  const garbageRows = Array.from({ length: count }, () => {
+    const gapCol = Math.floor(random() * width);
+    return Array.from({ length: width }, (_, col) => (col === gapCol ? 0 : GARBAGE_CELL_ID));
+  });
+
+  return [...remainingRows, ...garbageRows];
 }

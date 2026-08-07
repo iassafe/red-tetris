@@ -10,8 +10,9 @@ import { rotateMatrix,
   getNextPiece,
   createEmptyGrid,
   tick,
-  getDropInterval } from './tetrisEngine';
-import { PIECE_KEYS } from './constants';
+  getDropInterval,
+  addGarbageRows } from './tetrisEngine';
+import { PIECE_KEYS, GARBAGE_CELL_ID } from './constants';
 import type { PieceKey } from './types';
 
 function emptyGrid(width: number, height: number): number[][] {
@@ -499,5 +500,49 @@ describe('getDropInterval', () => {
 
   it('never drops below the 100ms floor', () => {
     expect(getDropInterval(100)).toBe(100);
+  });
+});
+
+
+describe('addGarbageRows', () => {
+  it('returns the grid unchanged when count is 0', () => {
+    const grid = emptyGrid(4, 5);
+    const result = addGarbageRows(grid, 0, createSeededRandom(1));
+    expect(result).toEqual(grid);
+  });
+
+  it('pushes the grid up, dropping the top row and adding one garbage row at the bottom', () => {
+    const grid = emptyGrid(4, 5);
+    grid[4] = [1, 1, 1, 1]; // mark bottom row so we can trace it moved up
+
+    const result = addGarbageRows(grid, 1, createSeededRandom(1));
+
+    expect(result).toHaveLength(5);
+    expect(result[3]).toEqual([1, 1, 1, 1]); // original bottom row is now one higher
+  });
+
+  it('fills garbage rows with GARBAGE_CELL_ID except for one gap per row', () => {
+    const grid = emptyGrid(4, 5);
+    const result = addGarbageRows(grid, 1, createSeededRandom(1));
+
+    const garbageRow = result[4]!;
+    const gapCount = garbageRow.filter((cell) => cell === 0).length;
+    const filledCount = garbageRow.filter((cell) => cell === GARBAGE_CELL_ID).length;
+
+    expect(gapCount).toBe(1);
+    expect(filledCount).toBe(3);
+  });
+
+  it('does not mutate the original grid', () => {
+    const grid = emptyGrid(4, 5);
+    const snapshot = grid.map((row) => [...row]);
+
+    addGarbageRows(grid, 2, createSeededRandom(1));
+
+    expect(grid).toEqual(snapshot);
+  });
+  it('handles an empty grid without crashing (defensive)', () => {
+    const result = addGarbageRows([], 2, createSeededRandom(1));
+    expect(result).toEqual([[], []]);
   });
 });
