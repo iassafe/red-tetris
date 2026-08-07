@@ -4,7 +4,12 @@ import { rotateMatrix,
   clearFullRows,
   calculateScore, 
   getSpectrum,
-  getGhostPosition } from './tetrisEngine';
+  getGhostPosition, 
+  createSeededRandom,
+  generateBag,
+  getNextPiece } from './tetrisEngine';
+import { PIECE_KEYS } from './constants';
+import type { PieceKey } from '../../../shared/types';
 
 function emptyGrid(width: number, height: number): number[][] {
   return Array.from({ length: height }, () => Array(width).fill(0));
@@ -321,5 +326,82 @@ describe('getGhostPosition', () => {
     const grid = emptyGrid(10, 20);
     const result = getGhostPosition(grid, oPiece, { x: 4, y: 18 });
     expect(result).toEqual({ x: 4, y: 18 });
+  });
+});
+
+
+describe('createSeededRandom', () => {
+  it('produces the same sequence for the same seed', () => {
+    const randomA = createSeededRandom(42);
+    const randomB = createSeededRandom(42);
+
+    const sequenceA = [randomA(), randomA(), randomA()];
+    const sequenceB = [randomB(), randomB(), randomB()];
+
+    expect(sequenceA).toEqual(sequenceB);
+  });
+
+  it('produces different sequences for different seeds', () => {
+    const randomA = createSeededRandom(1);
+    const randomB = createSeededRandom(2);
+
+    expect(randomA()).not.toBe(randomB());
+  });
+
+  it('produces numbers in the range [0, 1)', () => {
+    const random = createSeededRandom(7);
+    for (let i = 0; i < 20; i++) {
+      const value = random();
+      expect(value).toBeGreaterThanOrEqual(0);
+      expect(value).toBeLessThan(1);
+    }
+  });
+});
+
+describe('generateBag', () => {
+  it('contains each of the 7 piece keys exactly once', () => {
+    const random = createSeededRandom(123);
+    const bag = generateBag(random);
+
+    expect(bag).toHaveLength(7);
+    expect([...bag].sort()).toEqual([...PIECE_KEYS].sort());
+  });
+
+  it('produces a different order for a different seed', () => {
+    const bagA = generateBag(createSeededRandom(1));
+    const bagB = generateBag(createSeededRandom(2));
+
+    expect(bagA).not.toEqual(bagB);
+  });
+});
+
+describe('getNextPiece', () => {
+  it('draws pieces from the existing queue without refilling', () => {
+    const random = createSeededRandom(1);
+    const queue: PieceKey[] = ['I', 'O', 'T'];
+
+    const { piece, remainingQueue } = getNextPiece(queue, random);
+
+    expect(piece).toBe('I');
+    expect(remainingQueue).toEqual(['O', 'T']);
+  });
+
+  it('refills with a fresh bag when the queue is empty', () => {
+    const random = createSeededRandom(99);
+
+    const { piece, remainingQueue } = getNextPiece([], random);
+
+    expect(PIECE_KEYS).toContain(piece);
+    expect(remainingQueue).toHaveLength(6); // 7-piece bag minus the one just drawn
+  });
+
+  it('does not mutate the original queue', () => {
+    const random = createSeededRandom(1);
+    const queue: PieceKey[] = ['I', 'O', 'T'];
+    const queueSnapshot = [...queue];
+
+    getNextPiece(queue, random);
+
+    expect(queue).toEqual(queueSnapshot);
   });
 });

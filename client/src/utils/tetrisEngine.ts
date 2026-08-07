@@ -1,3 +1,5 @@
+import { PIECE_KEYS } from './constants';
+import type { PieceKey } from '../../../shared/types';
 
 /**
  * Rotates a square NxN matrix 90 degrees clockwise.
@@ -164,4 +166,53 @@ export function getGhostPosition(
   }
 
   return { x: position.x, y: ghostY };
+}
+
+
+/**
+ * Creates a seeded pseudo-random number generator (mulberry32 algorithm).
+ * Same seed always produces the same infinite sequence of numbers in [0, 1).
+ * Returns a function you call repeatedly to draw the next number.
+ */
+export function createSeededRandom(seed: number): () => number {
+  let state = seed;
+  return function random(): number {
+    state |= 0;
+    state = (state + 0x6d2b79f5) | 0;
+    let t = Math.imul(state ^ (state >>> 15), 1 | state);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+
+/**
+ * Produces one shuffled "bag" containing each of the 7 piece keys exactly once,
+ * using Fisher-Yates shuffle driven by the given random function.
+ * Pure given a fixed sequence of outputs from `random`.
+ */
+export function generateBag(random: () => number): PieceKey[] {
+  const bag = [...PIECE_KEYS];
+
+  for (let i = bag.length - 1; i > 0; i--) {
+    const j = Math.floor(random() * (i + 1));
+    [bag[i], bag[j]] = [bag[j]!, bag[i]!];
+  }
+
+  return bag;
+}
+
+/**
+ * Draws the next piece from the queue. If the queue is empty, refills it
+ * with a freshly shuffled bag of all 7 pieces first.
+ * Pure: does not mutate the input queue, returns a new queue alongside the drawn piece.
+ */
+export function getNextPiece(
+  queue: PieceKey[],
+  random: () => number
+): { piece: PieceKey; remainingQueue: PieceKey[] } {
+  const currentQueue = queue.length > 0 ? queue : generateBag(random);
+  const [piece, ...remainingQueue] = currentQueue;
+
+  return { piece: piece!, remainingQueue };
 }
