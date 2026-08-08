@@ -1,6 +1,18 @@
 import { Player } from './Player';
-import { createSeededRandom, getNextPiece } from '../../shared/tetrisEngine';
+import {
+  createSeededRandom,
+  getNextPiece,
+  checkCollision,
+  tick,
+  calculateScore,
+  addGarbageRows,
+} from '../../shared/tetrisEngine';
 import type { PieceKey, GameStatus } from '../../shared/types';
+import { TETROMINOES } from '../../shared/constants';
+
+// Standard spawn column: horizontally centered-ish for a piece up to 4 wide.
+const SPAWN_X = 3;
+const SPAWN_Y = 0;
 
 export class Game {
   public readonly roomName: string;
@@ -67,6 +79,65 @@ export class Game {
     const { piece, remainingQueue } = getNextPiece(this.pieceQueue, this.random);
     this.pieceQueue = remainingQueue;
     return piece;
+  }
+
+  /**
+   * Draws the next piece for this player and places it at the spawn position.
+   * If the spawn position immediately collides, the player is eliminated (topped out).
+   */
+  spawnPiece(player: Player): void {
+    const key = this.drawNextPiece();
+    const matrix = TETROMINOES[key];
+    const position = { x: SPAWN_X, y: SPAWN_Y };
+
+    if (checkCollision(player.grid, matrix, position)) {
+      player.eliminate();
+      return;
+    }
+
+    player.activePiece = { key, matrix, position, touchingGround: false };
+    player.resetDropState();
+  }
+
+  /**
+   * Advances gravity by one tick for the given player's active piece.
+   * Handles movement, the lock-delay grace tick, locking, scoring, leveling,
+   * garbage broadcast to opponents, and spawning the next piece after a lock.
+   */
+  tickPlayer(player: Player): void {
+    if (!player.activePiece || !player.isAlive) return;
+
+    const { matrix, position, touchingGround } = player.activePiece;
+    const result = tick(player.grid, matrix, position, touchingGround ?? false);
+
+    if (!result.locked) {
+      player.activePiece = {
+        ...player.activePiece,
+        position: result.position,
+        touchingGround: result.touchingGround,
+      };
+      return;
+    }
+
+    // Piece locked this tick.
+    player.grid = result.grid!;
+    const linesCleared = result.linesCleared ?? 0;
+
+    if (linesCleared > 0) {
+      player.addScore(calculateScore(linesCleared, player.level));
+      player.registerLinesCleared(linesCleared);
+
+      const garbagePenalty = linesCleared - 1;
+      if (garbagePenalty > 0) {
+        for (const opponent of this.players) {
+          if (opponent.id !== player.id && opponent.isAlive) {
+            opponent.grid = addGarbageRows(opponent.grid, garbagePenalty, this.random);
+          }
+        }
+      }
+    }
+
+    this.spawnPiece(player);
   }
 
   /** Returns players still alive in the match. */

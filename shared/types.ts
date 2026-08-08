@@ -7,6 +7,7 @@ export interface ActivePiece {
   key: PieceKey;
   matrix: number[][];
   position: { x: number; y: number };
+  touchingGround?: boolean;
 }
 
 export type Spectrum = number[];
